@@ -1,13 +1,18 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Análisis de Comprensión Lectora | Gestión de Centro</title>
+    <title>Análisis Comparativo de Comprensión Lectora</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- XLSX Library -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <!-- PDF.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <!-- html2pdf -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
@@ -21,13 +26,13 @@
         #pdf-cover { display: none; }
         .page-break { page-break-before: always; }
         
-        /* Contenedor optimizado para PDF */
+        /* Contenedor optimizado para visualización e impresión sin recortes */
         .chart-wrapper-pdf {
             position: relative;
             width: 100%;
             max-width: 800px;
             margin: 0 auto;
-            height: 280px; /* Tamaño reducido para encajar en A4 sin recortes */
+            height: 300px;
         }
 
         @media print {
@@ -35,26 +40,37 @@
             .bg-white { box-shadow: none !important; border: none !important; }
         }
     </style>
-<style type="text/css">
-.grande { font-size: 60px; }
-</style>
-<script>
-// Escribir aqui el código Javascript
-</script>
 </head>
 <body class="min-h-screen flex flex-col">
+
+<!-- Notificaciones y Modales Custom sin usar alert/confirm nativos -->
+<div id="custom-toast" class="fixed top-5 right-5 z-50 transform translate-y-[-100px] opacity-0 transition-all duration-300 bg-red-500 text-white px-6 py-4 rounded-2xl shadow-xl font-bold flex items-center gap-2">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+    <span id="toast-message">Mensaje</span>
+</div>
+
+<div id="reset-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden items-center justify-center">
+    <div class="bg-white p-8 rounded-[32px] max-w-sm w-full mx-4 shadow-2xl animate-in">
+        <h3 class="text-xl font-black mb-4 text-slate-900">¿Restaurar aplicación?</h3>
+        <p class="text-slate-500 text-sm mb-6 leading-relaxed">Esta acción eliminará de forma permanente todos los informes cargados y análisis generados.</p>
+        <div class="flex gap-3 justify-end">
+            <button onclick="closeResetModal()" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-all">Cancelar</button>
+            <button onclick="confirmReset()" class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs transition-all">Borrar Datos</button>
+        </div>
+    </div>
+</div>
 
 <div class="flex-grow max-w-6xl mx-auto w-full px-4 py-12">
     <!-- Header -->
     <header class="mb-12 text-center no-print">
-        <div class="inline-block px-4 py-1.5 mb-4 text-xs font-bold tracking-widest text-blue-600 uppercase bg-blue-50 rounded-full">Gestión Académica Profesional</div>
+        <div class="inline-block px-4 py-1.5 mb-4 text-xs font-bold tracking-widest text-blue-600 uppercase bg-blue-50 rounded-full">Gestión y Evolución Académica</div>
         <h1 class="text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight mb-4">Comprensión Lectora</h1>
-        <p class="text-slate-500 max-w-2xl mx-auto text-lg">Auditoría de resultados académicos por niveles y grupos.</p>
+        <p class="text-slate-500 max-w-2xl mx-auto text-lg">Estudio de progreso y auditoría de resultados comparativos por niveles y grupos.</p>
 
         <div class="mt-8 flex flex-wrap justify-center gap-4">
             <button onclick="loadDemo()" class="flex items-center gap-2 px-6 py-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all shadow-lg text-sm">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                Cargar Datos de Ejemplo
+                Cargar Datos de Ejemplo (Inicial y Final)
             </button>
         </div>
     </header>
@@ -68,17 +84,32 @@
 
     <!-- PESTAÑA: CARGA -->
     <section id="tab-info" class="space-y-8 no-print">
-        <div class="max-w-xl mx-auto bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-            <h2 class="text-xl font-bold text-slate-800 mb-2">Desglose Grupal</h2>
-            <p class="text-xs text-slate-400 mb-6 font-medium">Sube el Excel con los datos de 1º a 4º de ESO por grupos.</p>
-            <div id="drop-group" class="drop-zone p-12 rounded-2xl text-center">
-                <p class="text-slate-400 text-sm font-medium">Arrastra el archivo aquí o haz clic</p>
-                <input type="file" id="input-group" class="hidden" accept=".xlsx, .xls">
-                <div id="status-group" class="mt-4 text-sm font-bold text-indigo-600"></div>
+        <div class="grid md:grid-cols-2 gap-8">
+            <!-- Evaluación Inicial -->
+            <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                <h2 class="text-xl font-bold text-slate-800 mb-2">1. Evaluación Inicial <span class="text-red-500 text-sm">* Obligatorio</span></h2>
+                <p class="text-xs text-slate-400 mb-6 font-medium">Sube el archivo de diagnóstico o evaluación inicial por grupos.</p>
+                <div id="drop-initial" class="drop-zone p-12 rounded-2xl text-center">
+                    <p class="text-slate-400 text-sm font-medium">Arrastra tu archivo aquí o haz clic</p>
+                    <input type="file" id="input-initial" class="hidden" accept=".xlsx, .xls">
+                    <div id="status-initial" class="mt-4 text-sm font-bold text-blue-600"></div>
+                </div>
             </div>
-            <div class="mt-8 flex justify-center">
-                <button onclick="startAnalysis()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-12 rounded-2xl shadow-xl transition-all w-full">PROCESAR ANÁLISIS</button>
+
+            <!-- Evaluación Final -->
+            <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                <h2 class="text-xl font-bold text-slate-800 mb-2">2. Evaluación Final <span class="text-slate-400 text-xs font-normal">(Opcional)</span></h2>
+                <p class="text-xs text-slate-400 mb-6 font-medium">Sube el archivo de control o evaluación final para comparar la evolución.</p>
+                <div id="drop-final" class="drop-zone p-12 rounded-2xl text-center">
+                    <p class="text-slate-400 text-sm font-medium">Arrastra tu archivo aquí o haz clic</p>
+                    <input type="file" id="input-final" class="hidden" accept=".xlsx, .xls">
+                    <div id="status-final" class="mt-4 text-sm font-bold text-emerald-600"></div>
+                </div>
             </div>
+        </div>
+
+        <div class="flex justify-center mt-8">
+            <button onclick="startAnalysis()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-16 rounded-2xl shadow-xl transition-all w-full max-w-md">INICIAR EL ANÁLISIS</button>
         </div>
     </section>
 
@@ -89,22 +120,24 @@
             <!-- Portada PDF -->
             <div id="pdf-cover" class="h-[900px] flex flex-col items-center justify-center text-center p-20 border-[12px] border-blue-50 mb-20 bg-white">
                 <h1 class="text-6xl font-black text-slate-900 mb-4">INFORME DE COMPRENSIÓN LECTORA</h1>
-                <p class="text-2xl text-blue-600 font-bold mb-10">Análisis Consolidado de Centro</p>
+                <p class="text-2xl text-blue-600 font-bold mb-10">Análisis y Progreso Académico de Centro</p>
                 <div class="w-24 h-1 bg-slate-200 rounded-full mb-10"></div>
                 <p id="pdf-date" class="text-slate-400 text-xl"></p>
             </div>
 
-            <!-- Resumen Destacado -->
-            <div class="mb-12 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-blue-600 p-8 rounded-[32px] text-white shadow-blue-200 shadow-lg">
-                    <p class="text-blue-100 font-bold uppercase tracking-widest text-xs mb-2">Total Alumnado Evaluado</p>
-                    <h4 id="highlight-total" class="text-5xl font-black">0</h4>
-                    <p class="mt-4 text-sm text-blue-100">Suma total de todos los niveles educativos analizados.</p>
-                </div>
+            <!-- Resúmenes Destacados -->
+            <div id="highlights-container" class="mb-12 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Inicial -->
                 <div class="bg-slate-900 p-8 rounded-[32px] text-white">
-                    <p class="text-slate-400 font-bold uppercase tracking-widest text-xs mb-2">Cobertura del Centro</p>
-                    <h4 class="text-5xl font-black">100%</h4>
-                    <p class="mt-4 text-sm text-slate-400">Datos procesados desde 1º de ESO hasta 4º de ESO.</p>
+                    <p class="text-slate-400 font-bold uppercase tracking-widest text-xs mb-2">Alumnado Evaluado (Inicial)</p>
+                    <h4 id="highlight-initial-total" class="text-5xl font-black">0</h4>
+                    <p class="mt-4 text-sm text-slate-400">Total de alumnos registrados en el diagnóstico inicial.</p>
+                </div>
+                <!-- Final -->
+                <div id="final-highlight-card" class="bg-blue-600 p-8 rounded-[32px] text-white shadow-blue-200 shadow-lg hidden">
+                    <p class="text-blue-100 font-bold uppercase tracking-widest text-xs mb-2">Alumnado Evaluado (Final)</p>
+                    <h4 id="highlight-final-total" class="text-5xl font-black">0</h4>
+                    <p id="txt-evolution-summary" class="mt-4 text-sm text-blue-100">Evaluación de seguimiento procesada.</p>
                 </div>
             </div>
 
@@ -118,11 +151,14 @@
                         <thead class="bg-slate-50 text-slate-500 text-xs font-bold uppercase">
                             <tr>
                                 <th class="px-8 py-5 text-left">Nivel Competencial</th>
-                                <th class="px-8 py-5 text-center">Nº Alumnos</th>
-                                <th class="px-8 py-5 text-right">Porcentaje</th>
+                                <th class="px-8 py-5 text-center bg-slate-100/50">Nº Alumnos (Inicial)</th>
+                                <th class="px-8 py-5 text-right bg-slate-100/50">Porcentaje (Inicial)</th>
+                                <th class="px-8 py-5 text-center bg-blue-50/50 final-col hidden">Nº Alumnos (Final)</th>
+                                <th class="px-8 py-5 text-right bg-blue-50/50 final-col hidden">Porcentaje (Final)</th>
+                                <th class="px-8 py-5 text-center bg-emerald-50/50 final-col hidden">Variación Absoluta</th>
                             </tr>
                         </thead>
-                        <tbody id="table-global" class="divide-y divide-slate-100 text-slate-700 text-lg"></tbody>
+                        <tbody id="table-global" class="divide-y divide-slate-100 text-slate-700 text-base"></tbody>
                     </table>
                 </div>
             </div>
@@ -133,14 +169,25 @@
                     <span class="w-2 h-8 bg-emerald-500 rounded-full"></span> 2. Análisis Diferenciado por Niveles Educativos
                 </h3>
                 <div class="border border-slate-100 rounded-3xl overflow-hidden shadow-sm">
-                    <table class="w-full">
+                    <table class="w-full text-sm">
                         <thead class="bg-slate-50 text-slate-500 text-xs font-bold uppercase">
                             <tr>
-                                <th class="px-8 py-5 text-left">Nivel Educativo</th>
-                                <th class="px-4 py-5 text-center text-green-600">Óptimo</th>
-                                <th class="px-4 py-5 text-center text-amber-500">Medio</th>
-                                <th class="px-4 py-5 text-center text-red-500">Inadecuado</th>
-                                <th class="px-4 py-5 text-center font-black">Total</th>
+                                <th class="px-6 py-5 text-left" rowspan="2">Nivel Educativo</th>
+                                <th class="px-4 py-3 text-center bg-slate-100/40" colspan="3">Evaluación Inicial</th>
+                                <th class="px-4 py-3 text-center bg-blue-50/40 final-col hidden" colspan="3">Evaluación Final</th>
+                                <th class="px-4 py-3 text-center bg-emerald-50/40 final-col hidden" colspan="3">Variación (Progreso)</th>
+                                <th class="px-4 py-5 text-center font-black" rowspan="2">Total Alumnos</th>
+                            </tr>
+                            <tr class="border-t border-slate-100">
+                                <th class="px-2 py-2 text-center text-green-600 font-semibold bg-slate-100/20">Ópt.</th>
+                                <th class="px-2 py-2 text-center text-amber-500 font-semibold bg-slate-100/20">Med.</th>
+                                <th class="px-2 py-2 text-center text-red-500 font-semibold bg-slate-100/20">Inad.</th>
+                                <th class="px-2 py-2 text-center text-green-600 font-semibold bg-blue-50/20 final-col hidden">Ópt.</th>
+                                <th class="px-2 py-2 text-center text-amber-500 font-semibold bg-blue-50/20 final-col hidden">Med.</th>
+                                <th class="px-2 py-2 text-center text-red-500 font-semibold bg-blue-50/20 final-col hidden">Inad.</th>
+                                <th class="px-2 py-2 text-center text-green-600 font-semibold bg-emerald-50/20 final-col hidden">▲ Ópt.</th>
+                                <th class="px-2 py-2 text-center text-amber-500 font-semibold bg-emerald-50/20 final-col hidden">▲ Med.</th>
+                                <th class="px-2 py-2 text-center text-red-500 font-semibold bg-emerald-50/20 final-col hidden">▼ Inad.</th>
                             </tr>
                         </thead>
                         <tbody id="table-levels" class="divide-y divide-slate-100 text-slate-700"></tbody>
@@ -148,22 +195,42 @@
                 </div>
             </div>
 
-            <!-- Gráfico y Tabla Grupal -->
+            <!-- Gráficos y Tabla Grupal -->
             <div class="mb-16 page-break pt-10">
                 <h3 class="text-2xl font-extrabold text-slate-800 mb-8 flex items-center gap-3">
-                    <span class="w-2 h-8 bg-indigo-600 rounded-full"></span> 3. Análisis Grupal Detallado
+                    <span class="w-2 h-8 bg-indigo-600 rounded-full"></span> 3. Análisis Grupal Detallado y Comparativo
                 </h3>
+                
+                <!-- Subpestañas del Cuadro 3 para control de datos dinámicos -->
+                <div id="view-selector-container" class="flex justify-center gap-2 mb-6 no-print hidden">
+                    <button onclick="setGroupView('initial')" id="btn-view-initial" class="px-5 py-2.5 rounded-xl text-xs font-bold bg-slate-200 text-slate-500 hover:text-slate-700 transition-all">Evaluación Inicial</button>
+                    <button onclick="setGroupView('final')" id="btn-view-final" class="px-5 py-2.5 rounded-xl text-xs font-bold bg-slate-200 text-slate-500 hover:text-slate-700 transition-all">Evaluación Final</button>
+                    <button onclick="setGroupView('contrast')" id="btn-view-contrast" class="px-5 py-2.5 rounded-xl text-xs font-bold bg-blue-600 text-white shadow-sm transition-all">Contraste de Ambas</button>
+                </div>
+
                 <div class="bg-slate-50 p-6 rounded-[32px] border border-slate-100 mb-8">
+                    <div class="flex justify-end mb-4 no-print">
+                        <button onclick="downloadChartAsImage()" class="flex items-center gap-2 px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-xl transition-all shadow-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            Descargar Gráfico (PNG)
+                        </button>
+                    </div>
                     <div class="chart-wrapper-pdf">
                         <canvas id="chart-groups"></canvas>
                     </div>
                 </div>
+
                 <div class="border border-slate-100 rounded-3xl overflow-hidden shadow-sm">
-                    <table class="w-full text-sm">
-                        <thead class="bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-widest">
-                            <tr><th class="px-6 py-4 text-left">Grupo</th><th class="px-4 py-4 text-center">Óptimo</th><th class="px-4 py-4 text-center">Medio</th><th class="px-4 py-4 text-center">Inadecuado</th></tr>
+                    <table class="w-full text-xs">
+                        <thead class="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider">
+                            <tr id="table-groups-header-r1">
+                                <!-- Cabeceras fila 1 dinámica -->
+                            </tr>
+                            <tr id="table-groups-header-r2" class="border-t border-slate-100">
+                                <!-- Cabeceras fila 2 dinámica -->
+                            </tr>
                         </thead>
-                        <tbody id="table-groups" class="divide-y divide-slate-100"></tbody>
+                        <tbody id="table-groups" class="divide-y divide-slate-100 text-slate-700"></tbody>
                     </table>
                 </div>
             </div>
@@ -171,11 +238,20 @@
             <!-- Pedagógico -->
             <div class="space-y-6 page-break pt-10">
                 <h3 class="text-2xl font-extrabold text-slate-800 mb-4 flex items-center gap-3">
-                    <span class="w-2 h-8 bg-orange-500 rounded-full"></span> 4. Plan de Acción Recomendado
+                    <span class="w-2 h-8 bg-orange-500 rounded-full"></span> 4. Informe de Diagnóstico y Plan Pedagógico
                 </h3>
-                <div id="pedagogy-content" class="grid gap-4">
+                <div class="grid gap-6 md:grid-cols-3">
+                    <div class="bg-green-50 p-6 rounded-2xl border border-green-100">
+                        <h4 class="font-bold text-green-900 mb-2">Puntos Fuertes</h4>
+                        <p id="txt-strengths" class="text-slate-700 text-xs leading-relaxed"></p>
+                    </div>
+                    <div class="bg-amber-50 p-6 rounded-2xl border border-amber-100">
+                        <h4 class="font-bold text-amber-900 mb-2">Oportunidades de Mejora</h4>
+                        <p id="txt-opportunities" class="text-slate-700 text-xs leading-relaxed"></p>
+                    </div>
                     <div class="bg-blue-50 p-6 rounded-2xl border border-blue-100">
-                        <p id="txt-pedagogy" class="text-slate-700 text-sm leading-relaxed"></p>
+                        <h4 class="font-bold text-blue-900 mb-2">Recomendaciones Pedagógicas</h4>
+                        <p id="txt-pedagogy" class="text-slate-700 text-xs leading-relaxed"></p>
                     </div>
                 </div>
             </div>
@@ -183,21 +259,82 @@
     </section>
 
     <!-- PESTAÑA: EXPORTAR -->
-    <section id="tab-export" class="hidden">
-        <div class="bg-white p-12 rounded-[40px] shadow-xl border border-slate-100 text-center max-w-xl mx-auto">
-            <h2 class="text-3xl font-extrabold text-slate-800 mb-8">Exportar Informe</h2>
-            <button onclick="exportPDF()" class="w-full bg-slate-900 hover:bg-black text-white font-bold py-6 rounded-2xl flex items-center justify-center gap-3 transition-all mb-4">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                DESCARGAR PDF PARA IMPRESIÓN
-            </button>
-            <button onclick="location.reload()" class="text-red-500 text-sm font-bold">Borrar datos y empezar de nuevo</button>
+    <section id="tab-export" class="hidden no-print">
+        <div class="bg-white p-12 rounded-[40px] shadow-xl border border-slate-100 text-center max-w-xl mx-auto space-y-6">
+            <h2 class="text-3xl font-extrabold text-slate-800">Exportar Informe</h2>
+            <p class="text-slate-500 text-sm">Obtén la comparativa en formato digital para compartir con el equipo directivo o el claustro.</p>
+            
+            <div class="grid gap-4">
+                <button onclick="exportPDF()" class="w-full bg-slate-900 hover:bg-black text-white font-bold py-5 rounded-2xl flex items-center justify-center gap-3 transition-all">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    DESCARGAR COMPARATIVA (PDF)
+                </button>
+                <button onclick="exportExcel()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-5 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-md">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    DESCARGAR EXCEL (.XLSX)
+                </button>
+            </div>
+            
+            <button onclick="openResetModal()" class="text-red-500 text-sm font-bold block mx-auto hover:underline pt-4">Borrar todos los datos cargados</button>
         </div>
     </section>
 </div>
 
+<!-- Footer -->
+<footer class="bg-white border-t border-slate-100 py-8 mt-12 no-print">
+    <div class="max-w-6xl mx-auto px-4 text-center">
+        <p class="text-slate-500 text-sm">
+            Elaborado por 
+            <a href="https://blogsaverroes.juntadeandalucia.es/ellocodelamochila/" target="_blank" class="text-blue-600 font-bold hover:underline decoration-2 underline-offset-4">
+                El loco de la mochila
+            </a> 
+            en 2026.
+        </p>
+    </div>
+</footer>
+
 <script>
-    let rawData = [];
+    let rawInitial = null;
+    let rawFinal = null;
     let myChart = null;
+    let currentGroupView = 'contrast'; // 'initial' | 'final' | 'contrast'
+
+    // Control global de notificaciones visuales (toast) sin recurrir a alerts
+    function showToast(message, type = "error") {
+        const toast = document.getElementById('custom-toast');
+        const text = document.getElementById('toast-message');
+        text.textContent = message;
+        
+        if (type === "success") {
+            toast.className = "fixed top-5 right-5 z-50 transform translate-y-0 opacity-100 transition-all duration-300 bg-emerald-600 text-white px-6 py-4 rounded-2xl shadow-xl font-bold flex items-center gap-2";
+        } else {
+            toast.className = "fixed top-5 right-5 z-50 transform translate-y-0 opacity-100 transition-all duration-300 bg-red-500 text-white px-6 py-4 rounded-2xl shadow-xl font-bold flex items-center gap-2";
+        }
+        
+        setTimeout(() => {
+            toast.className = "fixed top-5 right-5 z-50 transform translate-y-[-100px] opacity-0 transition-all duration-300 bg-red-500 text-white px-6 py-4 rounded-2xl shadow-xl font-bold flex items-center gap-2";
+        }, 4000);
+    }
+
+    function openResetModal() {
+        document.getElementById('reset-modal').classList.remove('hidden');
+        document.getElementById('reset-modal').classList.add('flex');
+    }
+
+    function closeResetModal() {
+        document.getElementById('reset-modal').classList.add('hidden');
+        document.getElementById('reset-modal').classList.remove('flex');
+    }
+
+    function confirmReset() {
+        rawInitial = null;
+        rawFinal = null;
+        document.getElementById('status-initial').textContent = '';
+        document.getElementById('status-final').textContent = '';
+        closeResetModal();
+        showTab('info');
+        showToast("Se han eliminado los datos de la sesión.", "success");
+    }
 
     function showTab(tabId) {
         ['info', 'analysis', 'export'].forEach(t => {
@@ -208,14 +345,16 @@
         document.getElementById(`btn-${tabId}`).className = 'flex-1 py-3 px-4 rounded-xl text-sm transition-all tab-active';
     }
 
-    setupDragAndDrop('drop-group', 'input-group', 'status-group', d => rawData = d);
+    setupDragAndDrop('drop-initial', 'input-initial', 'status-initial', d => rawInitial = d);
+    setupDragAndDrop('drop-final', 'input-final', 'status-final', d => rawFinal = d);
 
     function setupDragAndDrop(dropId, inputId, statusId, callback) {
         const dropZone = document.getElementById(dropId);
         const input = document.getElementById(inputId);
         dropZone.onclick = () => input.click();
-        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('bg-blue-50'); };
-        dropZone.ondrop = (e) => { e.preventDefault(); handleFile(e.dataTransfer.files[0], statusId, callback); };
+        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); };
+        dropZone.ondragleave = () => dropZone.classList.remove('drag-over');
+        dropZone.ondrop = (e) => { e.preventDefault(); dropZone.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0], statusId, callback); };
         input.onchange = (e) => handleFile(e.target.files[0], statusId, callback);
     }
 
@@ -223,30 +362,363 @@
         if (!file) return;
         const reader = new FileReader();
         reader.onload = (e) => {
-            const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
-            const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-            document.getElementById(statusId).textContent = `✓ ${file.name}`;
-            callback(json);
+            try {
+                const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                document.getElementById(statusId).textContent = `✓ ${file.name}`;
+                callback(json);
+                showToast(`Se ha cargado correctamente: ${file.name}`, "success");
+            } catch (error) {
+                document.getElementById(statusId).textContent = `✗ Error procesando archivo`;
+                showToast("El archivo subido no ha podido ser procesado. Comprueba su estructura.");
+            }
         };
         reader.readAsArrayBuffer(file);
     }
 
     function loadDemo() {
-        rawData = [
-            { "Grupo": "1º de ESO A", "Óptimo": 14, "Medio": 10, "Inadecuado": 3 },
-            { "Grupo": "1º de ESO B", "Óptimo": 12, "Medio": 12, "Inadecuado": 4 },
-            { "Grupo": "2º de ESO A", "Óptimo": 18, "Medio": 8, "Inadecuado": 2 },
-            { "Grupo": "3º de ESO A", "Óptimo": 20, "Medio": 6, "Inadecuado": 1 },
-            { "Grupo": "4º de ESO A", "Óptimo": 22, "Medio": 4, "Inadecuado": 0 }
+        rawInitial = [
+            { "Grupo": "1º de ESO A", "Óptimo": 10, "Medio": 10, "Inadecuado": 8 },
+            { "Grupo": "1º de ESO B", "Óptimo": 8, "Medio": 12, "Inadecuado": 10 },
+            { "Grupo": "2º de ESO A", "Óptimo": 12, "Medio": 10, "Inadecuado": 6 },
+            { "Grupo": "3º de ESO A", "Óptimo": 15, "Medio": 10, "Inadecuado": 4 },
+            { "Grupo": "4º de ESO A", "Óptimo": 18, "Medio": 8, "Inadecuado": 2 }
         ];
+        rawFinal = [
+            { "Grupo": "1º de ESO A", "Óptimo": 16, "Medio": 9, "Inadecuado": 3 },
+            { "Grupo": "1º de ESO B", "Óptimo": 14, "Medio": 12, "Inadecuado": 4 },
+            { "Grupo": "2º de ESO A", "Óptimo": 18, "Medio": 8, "Inadecuado": 2 },
+            { "Grupo": "3º de ESO A", "Óptimo": 20, "Medio": 8, "Inadecuado": 1 },
+            { "Grupo": "4º de ESO A", "Óptimo": 23, "Medio": 5, "Inadecuado": 0 }
+        ];
+        
+        document.getElementById('status-initial').textContent = `✓ Datos de Evaluación Inicial Cargados`;
+        document.getElementById('status-final').textContent = `✓ Datos de Evaluación Final Cargados`;
+        showToast("Datos de demostración aplicados correctamente", "success");
         startAnalysis();
     }
 
+    // Helper para formatear las variaciones numéricas (Positivos Verde, Negativos Rojo)
+    function formatDifferenceValue(value, isNeutral = false) {
+        if (value === 0) return `<span class="text-slate-400 font-bold">=</span>`;
+        if (value > 0) {
+            return `<span class="text-green-600 font-bold font-mono">+${value}</span>`;
+        } else {
+            return `<span class="text-red-500 font-bold font-mono">${value}</span>`;
+        }
+    }
+
     function startAnalysis() {
-        if (!rawData.length) return alert("Carga un archivo con datos.");
-        
-        // 1. Procesar grupos con limpieza estricta
-        const groups = rawData.map(row => {
+        if (!rawInitial || !rawInitial.length) {
+            showToast("Es obligatorio aportar el archivo de la Evaluación Inicial.");
+            return;
+        }
+
+        const initialGroups = parseDataset(rawInitial);
+        const finalGroups = rawFinal ? parseDataset(rawFinal) : null;
+        const hasFinal = !!finalGroups;
+
+        // Mostrar / Ocultar selectores y columnas de Evaluación Final
+        const finalCols = document.querySelectorAll('.final-col');
+        finalCols.forEach(col => {
+            if (hasFinal) col.classList.remove('hidden');
+            else col.classList.add('hidden');
+        });
+
+        const selectorContainer = document.getElementById('view-selector-container');
+        if (hasFinal) {
+            selectorContainer.classList.remove('hidden');
+            currentGroupView = 'contrast';
+        } else {
+            selectorContainer.classList.add('hidden');
+            currentGroupView = 'initial';
+        }
+
+        const finalCard = document.getElementById('final-highlight-card');
+        if (hasFinal) finalCard.classList.remove('hidden');
+        else finalCard.classList.add('hidden');
+
+        // Totales globales
+        const globalInitial = initialGroups.reduce((acc, g) => { acc.o += g.o; acc.m += g.m; acc.i += g.i; return acc; }, { o: 0, m: 0, i: 0 });
+        const totalInitial = globalInitial.o + globalInitial.m + globalInitial.i;
+        document.getElementById('highlight-initial-total').textContent = totalInitial;
+
+        let globalFinal = null;
+        let totalFinal = 0;
+        if (hasFinal) {
+            globalFinal = finalGroups.reduce((acc, g) => { acc.o += g.o; acc.m += g.m; acc.i += g.i; return acc; }, { o: 0, m: 0, i: 0 });
+            totalFinal = globalFinal.o + globalFinal.m + globalFinal.i;
+            document.getElementById('highlight-final-total').textContent = totalFinal;
+
+            const diffInad = globalFinal.i - globalInitial.i;
+            const textSummary = diffInad < 0 
+                ? `Reducción de ${Math.abs(diffInad)} alumnos en nivel Inadecuado.` 
+                : `Variación de ${diffInad} alumnos en nivel Inadecuado.`;
+            document.getElementById('txt-evolution-summary').textContent = textSummary;
+        }
+
+        // Render Tabla Global
+        const globalRows = [
+            { l: 'Óptimo', vi: globalInitial.o, vf: globalFinal ? globalFinal.o : 0, c: 'text-green-600', b: 'bg-green-100', bf: 'bg-green-200' },
+            { l: 'Medio', vi: globalInitial.m, vf: globalFinal ? globalFinal.m : 0, c: 'text-amber-500', b: 'bg-amber-100', bf: 'bg-amber-200' },
+            { l: 'Inadecuado', vi: globalInitial.i, vf: globalFinal ? globalFinal.i : 0, c: 'text-red-500', b: 'bg-red-100', bf: 'bg-red-200' }
+        ];
+
+        document.getElementById('table-global').innerHTML = globalRows.map(r => {
+            const pctI = totalInitial ? ((r.vi / totalInitial) * 100).toFixed(1) : '0';
+            const pctF = totalFinal ? ((r.vf / totalFinal) * 100).toFixed(1) : '0';
+            const diffVal = r.vf - r.vi;
+
+            return `
+                <tr>
+                    <td class="px-8 py-5 font-bold ${r.c}">${r.l}</td>
+                    <td class="px-8 py-5 text-center font-semibold">${r.vi}</td>
+                    <td class="px-8 py-5 text-right"><span class="${r.b} px-3 py-1 rounded-full text-xs font-bold">${pctI}%</span></td>
+                    ${hasFinal ? `
+                        <td class="px-8 py-5 text-center font-semibold bg-blue-50/10">${r.vf}</td>
+                        <td class="px-8 py-5 text-right bg-blue-50/10"><span class="${r.bf} px-3 py-1 rounded-full text-xs font-bold">${pctF}%</span></td>
+                        <td class="px-8 py-5 text-center bg-emerald-50/10">${formatDifferenceValue(diffVal)}</td>
+                    ` : ''}
+                </tr>
+            `;
+        }).join('');
+
+        // Procesamiento por Niveles
+        const levelsMap = {};
+        initialGroups.forEach(g => {
+            const levelName = extractLevelName(g.n);
+            if (!levelsMap[levelName]) levelsMap[levelName] = { io: 0, im: 0, ii: 0, fo: 0, fm: 0, fi: 0 };
+            levelsMap[levelName].io += g.o;
+            levelsMap[levelName].im += g.m;
+            levelsMap[levelName].ii += g.i;
+        });
+
+        if (hasFinal) {
+            finalGroups.forEach(g => {
+                const levelName = extractLevelName(g.n);
+                if (!levelsMap[levelName]) levelsMap[levelName] = { io: 0, im: 0, ii: 0, fo: 0, fm: 0, fi: 0 };
+                levelsMap[levelName].fo += g.o;
+                levelsMap[levelName].fm += g.m;
+                levelsMap[levelName].fi += g.i;
+            });
+        }
+
+        document.getElementById('table-levels').innerHTML = Object.entries(levelsMap).map(([name, d]) => {
+            const totalRow = d.io + d.im + d.ii;
+            
+            // Cálculos de variación
+            const diffO = d.fo - d.io;
+            const diffM = d.fm - d.im;
+            const diffI = d.fi - d.ii;
+
+            return `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="px-6 py-4 font-bold text-slate-800">${name}</td>
+                    <td class="text-center font-medium text-green-600 bg-slate-100/10">${d.io}</td>
+                    <td class="text-center font-medium text-amber-500 bg-slate-100/10">${d.im}</td>
+                    <td class="text-center font-medium text-red-500 bg-slate-100/10">${d.ii}</td>
+                    ${hasFinal ? `
+                        <td class="text-center font-medium text-green-600 bg-blue-50/10">${d.fo}</td>
+                        <td class="text-center font-medium text-amber-500 bg-blue-50/10">${d.fm}</td>
+                        <td class="text-center font-medium text-red-500 bg-blue-50/10">${d.fi}</td>
+                        <td class="text-center font-bold bg-emerald-50/10">${formatDifferenceValue(diffO)}</td>
+                        <td class="text-center font-bold bg-emerald-50/10">${formatDifferenceValue(diffM)}</td>
+                        <td class="text-center font-bold bg-emerald-50/10">${formatDifferenceValue(diffI)}</td>
+                    ` : ''}
+                    <td class="text-center font-black bg-slate-100/20">${totalRow}</td>
+                </tr>
+            `;
+        }).join('');
+
+        // Análisis Pedagógico Dinámico
+        let strengths = `En el diagnóstico inicial se registraron ${globalInitial.o} alumnos en nivel Óptimo.`;
+        let opps = `Se identificaron ${globalInitial.i} alumnos en nivel Inadecuado con prioridad de intervención.`;
+        let recommendations = `Es necesario focalizar planes de lectura comprensiva diaria en los grupos con menor rendimiento.`;
+
+        if (hasFinal) {
+            const diffO = globalFinal.o - globalInitial.o;
+            const diffI = globalInitial.i - globalFinal.i;
+
+            strengths = `Se ha constatado un claro progreso pedagógico. El número total de alumnos en nivel Óptimo aumentó en ${diffO} estudiantes, destacando la asimilación de estrategias de comprensión compleja.`;
+            opps = `A pesar del avance, todavía permanecen ${globalFinal.i} alumnos en nivel Inadecuado en todo el centro. Los grupos con mayor margen de mejora en este seguimiento final son aquellos que muestran una transición más lenta del nivel Medio al Óptimo.`;
+            recommendations = `Se ha logrado reducir en un ${globalInitial.i ? ((diffI/globalInitial.i)*100).toFixed(0) : 0}% el alumnado en nivel Inadecuado (reducción de ${diffI} estudiantes). Se recomienda consolidar los agrupamientos flexibles, mantener las lecturas compartidas de 15 minutos diarios y realizar un seguimiento individualizado de los alumnos restantes en riesgo.`;
+        }
+
+        document.getElementById('txt-strengths').textContent = strengths;
+        document.getElementById('txt-opportunities').textContent = opps;
+        document.getElementById('txt-pedagogy').textContent = recommendations;
+
+        // Renderizar grupo
+        updateGroupSection();
+        showTab('analysis');
+    }
+
+    function setGroupView(view) {
+        currentGroupView = view;
+        updateGroupSection();
+    }
+
+    function updateGroupSection() {
+        const initialGroups = parseDataset(rawInitial);
+        const finalGroups = rawFinal ? parseDataset(rawFinal) : null;
+        const hasFinal = !!finalGroups;
+
+        const activeView = hasFinal ? currentGroupView : 'initial';
+
+        // Actualizar estados visuales de los botones de subpestañas
+        ['initial', 'final', 'contrast'].forEach(v => {
+            const btn = document.getElementById(`btn-view-${v}`);
+            if (btn) {
+                if (v === activeView) {
+                    btn.className = "px-5 py-2.5 rounded-xl text-xs font-bold bg-blue-600 text-white shadow-sm transition-all";
+                } else {
+                    btn.className = "px-5 py-2.5 rounded-xl text-xs font-bold bg-slate-200 text-slate-500 hover:text-slate-700 transition-all";
+                }
+            }
+        });
+
+        const groupsToRender = Array.from(new Set([...initialGroups.map(g => g.n), ...(finalGroups ? finalGroups.map(g => g.n) : [])]));
+
+        // Cabeceras Dinámicas en base a si tiene o no datos comparativos de Evaluación Final
+        const headerR1 = document.getElementById('table-groups-header-r1');
+        const headerR2 = document.getElementById('table-groups-header-r2');
+
+        if (hasFinal) {
+            // Muestra TODOS los datos (Inicial, Final y su Contraste / Variación simultánea)
+            headerR1.innerHTML = `
+                <th class="px-6 py-4 text-left" rowspan="2">Grupo</th>
+                <th class="px-4 py-2 text-center bg-slate-100/50 border-r border-slate-200" colspan="3">Evaluación Inicial</th>
+                <th class="px-4 py-2 text-center bg-blue-50/50 border-r border-slate-200" colspan="3">Evaluación Final</th>
+                <th class="px-4 py-2 text-center bg-emerald-50/50" colspan="3">Variación Absoluta (Final - Inicial)</th>
+            `;
+            headerR2.innerHTML = `
+                <th class="px-2 py-2 text-center text-green-600 font-bold bg-slate-100/20">Ópt.</th>
+                <th class="px-2 py-2 text-center text-amber-500 font-bold bg-slate-100/20">Med.</th>
+                <th class="px-2 py-2 text-center text-red-500 font-bold bg-slate-100/20 border-r border-slate-200">Inad.</th>
+                <th class="px-2 py-2 text-center text-green-600 font-bold bg-blue-50/10">Ópt.</th>
+                <th class="px-2 py-2 text-center text-amber-500 font-bold bg-blue-50/10">Med.</th>
+                <th class="px-2 py-2 text-center text-red-500 font-bold bg-blue-50/10 border-r border-slate-200">Inad.</th>
+                <th class="px-2 py-2 text-center text-green-600 font-bold bg-emerald-50/10">▲ Ópt.</th>
+                <th class="px-2 py-2 text-center text-amber-500 font-bold bg-emerald-50/10">▲ Med.</th>
+                <th class="px-2 py-2 text-center text-red-500 font-bold bg-emerald-50/10">▼ Inad.</th>
+            `;
+        } else {
+            // Modo simple cuando solo hay Evaluación Inicial cargada
+            headerR1.innerHTML = `
+                <th class="px-6 py-4 text-left" rowspan="2">Grupo</th>
+                <th class="px-4 py-2 text-center bg-slate-100/40" colspan="3">Evaluación Inicial</th>
+            `;
+            headerR2.innerHTML = `
+                <th class="px-2 py-2 text-center text-green-600 bg-slate-100/20 font-bold">Óptimo</th>
+                <th class="px-2 py-2 text-center text-amber-500 bg-slate-100/20 font-bold">Medio</th>
+                <th class="px-2 py-2 text-center text-red-500 bg-slate-100/20 font-bold">Inadecuado</th>
+            `;
+        }
+
+        const tableBody = document.getElementById('table-groups');
+        tableBody.innerHTML = groupsToRender.map(name => {
+            const gI = initialGroups.find(g => g.n === name) || { o: 0, m: 0, i: 0 };
+            const gF = finalGroups ? (finalGroups.find(g => g.n === name) || { o: 0, m: 0, i: 0 }) : { o: 0, m: 0, i: 0 };
+
+            if (hasFinal) {
+                // Cálculo de diferencia entre estados
+                const dO = gF.o - gI.o;
+                const dM = gF.m - gI.m;
+                const dI = gF.i - gI.i;
+
+                return `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="px-6 py-4 font-bold text-slate-800">${name}</td>
+                        <td class="text-center py-4 bg-slate-100/5">${gI.o}</td>
+                        <td class="text-center py-4 bg-slate-100/5">${gI.m}</td>
+                        <td class="text-center py-4 bg-slate-100/5 border-r border-slate-200">${gI.i}</td>
+                        <td class="text-center py-4 bg-blue-50/5">${gF.o}</td>
+                        <td class="text-center py-4 bg-blue-50/5">${gF.m}</td>
+                        <td class="text-center py-4 bg-blue-50/5 border-r border-slate-200">${gF.i}</td>
+                        <td class="text-center py-4 bg-emerald-50/5">${formatDifferenceValue(dO)}</td>
+                        <td class="text-center py-4 bg-emerald-50/5">${formatDifferenceValue(dM)}</td>
+                        <td class="text-center py-4 bg-emerald-50/5">${formatDifferenceValue(dI)}</td>
+                    </tr>
+                `;
+            } else {
+                const total = gI.o + gI.m + gI.i;
+                return `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="px-6 py-4 font-bold text-slate-800">${name}</td>
+                        <td class="text-center text-green-600 font-medium bg-slate-100/5">${gI.o} <span class="text-[10px] text-slate-400 font-normal">(${total ? ((gI.o/total)*100).toFixed(0) : 0}%)</span></td>
+                        <td class="text-center text-amber-500 font-medium bg-slate-100/5">${gI.m} <span class="text-[10px] text-slate-400 font-normal">(${total ? ((gI.m/total)*100).toFixed(0) : 0}%)</span></td>
+                        <td class="text-center text-red-500 font-medium bg-slate-100/5">${gI.i} <span class="text-[10px] text-slate-400 font-normal">(${total ? ((gI.i/total)*100).toFixed(0) : 0}%)</span></td>
+                    </tr>
+                `;
+            }
+        }).join('');
+
+        // Renderizar Gráfica
+        const ctx = document.getElementById('chart-groups').getContext('2d');
+        if (myChart) myChart.destroy();
+
+        const datasets = [];
+        if (activeView === 'contrast') {
+            datasets.push(
+                { label: 'Var - Óptimo', data: groupsToRender.map(n => ((finalGroups?.find(g=>g.n===n)||{o:0}).o - (initialGroups.find(g=>g.n===n)||{o:0}).o)), backgroundColor: '#22c55e' },
+                { label: 'Var - Medio', data: groupsToRender.map(n => ((finalGroups?.find(g=>g.n===n)||{m:0}).m - (initialGroups.find(g=>g.n===n)||{m:0}).m)), backgroundColor: '#f59e0b' },
+                { label: 'Var - Inadecuado', data: groupsToRender.map(n => ((finalGroups?.find(g=>g.n===n)||{i:0}).i - (initialGroups.find(g=>g.n===n)||{i:0}).i)), backgroundColor: '#ef4444' }
+            );
+        } else if (activeView === 'final') {
+            datasets.push(
+                { label: 'Óptimo', data: groupsToRender.map(n => (finalGroups.find(g=>g.n===n)||{o:0}).o), backgroundColor: '#22c55e' },
+                { label: 'Medio', data: groupsToRender.map(n => (finalGroups.find(g=>g.n===n)||{m:0}).m), backgroundColor: '#f59e0b' },
+                { label: 'Inadecuado', data: groupsToRender.map(n => (finalGroups.find(g=>g.n===n)||{i:0}).i), backgroundColor: '#ef4444' }
+            );
+        } else {
+            datasets.push(
+                { label: 'Óptimo', data: groupsToRender.map(n => (initialGroups.find(g=>g.n===n)||{o:0}).o), backgroundColor: '#22c55e' },
+                { label: 'Medio', data: groupsToRender.map(n => (initialGroups.find(g=>g.n===n)||{m:0}).m), backgroundColor: '#f59e0b' },
+                { label: 'Inadecuado', data: groupsToRender.map(n => (initialGroups.find(g=>g.n===n)||{i:0}).i), backgroundColor: '#ef4444' }
+            );
+        }
+
+        myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: groupsToRender,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9, weight: 'bold' } } }
+                },
+                scales: {
+                    x: { ticks: { font: { size: 9 } } },
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    // Función para descargar el gráfico de barras como imagen PNG
+    function downloadChartAsImage() {
+        const canvas = document.getElementById('chart-groups');
+        if (!canvas) {
+            showToast("No se ha encontrado el gráfico para exportar.");
+            return;
+        }
+        try {
+            const dataUrl = canvas.toDataURL("image/png");
+            const link = document.createElement('a');
+            link.download = 'grafico_comprension_lectora.png';
+            link.href = dataUrl;
+            link.click();
+            showToast("Imagen del gráfico descargada correctamente.", "success");
+        } catch (e) {
+            showToast("No se pudo exportar la imagen debido a limitaciones del navegador.");
+        }
+    }
+
+    function parseDataset(data) {
+        return data.map(row => {
             const values = Object.values(row);
             return {
                 n: String(values[0]),
@@ -255,90 +727,93 @@
                 i: parseInt(values[3]) || 0
             };
         });
+    }
 
-        // 2. Sumatorio Global Preciso
-        const global = groups.reduce((acc, g) => {
-            acc.o += g.o; acc.m += g.m; acc.i += g.i;
-            return acc;
-        }, { o: 0, m: 0, i: 0 });
+    // Identificación de nomenclatura de niveles completos (1º de ESO, etc.) sin recortar
+    function extractLevelName(groupName) {
+        let match = groupName.match(/^\d+º\s*de\s*ESO/i);
+        return match ? match[0].toUpperCase() : groupName.split(' ').slice(0, 3).join(' ').toUpperCase();
+    }
 
-        const totalEvaluados = global.o + global.m + global.i;
-        document.getElementById('highlight-total').textContent = totalEvaluados;
+    function exportExcel() {
+        if (!rawInitial || !rawInitial.length) {
+            showToast("No hay datos cargados para exportar.");
+            return;
+        }
 
-        // Render Tabla Global
-        document.getElementById('table-global').innerHTML = [
-            { l: 'Óptimo', v: global.o, c: 'text-green-600', b: 'bg-green-100' },
-            { l: 'Medio', v: global.m, c: 'text-amber-500', b: 'bg-amber-100' },
-            { l: 'Inadecuado', v: global.i, c: 'text-red-500', b: 'bg-red-100' }
-        ].map(r => `
-            <tr>
-                <td class="px-8 py-5 font-bold ${r.c}">${r.l}</td>
-                <td class="px-8 py-5 text-center font-black">${r.v}</td>
-                <td class="px-8 py-5 text-right"><span class="${r.b} px-4 py-1 rounded-full text-xs font-black text-slate-700">${totalEvaluados ? ((r.v/totalEvaluados)*100).toFixed(1) : 0}%</span></td>
-            </tr>
-        `).join('');
+        const initialGroups = parseDataset(rawInitial);
+        const finalGroups = rawFinal ? parseDataset(rawFinal) : null;
+        const hasFinal = !!finalGroups;
 
-        // 3. Procesar por Niveles (Nomenclatura Exacta)
-        const levelsMap = {};
-        groups.forEach(g => {
-            // Buscamos el patrón "Xº de ESO" o similares al inicio
-            let match = g.n.match(/^\d+º\s*de\s*ESO/i);
-            let levelName = match ? match[0].toUpperCase() : g.n.split(' ').slice(0,3).join(' ');
-            
-            if(!levelsMap[levelName]) levelsMap[levelName] = { o:0, m:0, i:0 };
-            levelsMap[levelName].o += g.o;
-            levelsMap[levelName].m += g.m;
-            levelsMap[levelName].i += g.i;
-        });
+        const wb = XLSX.utils.book_new();
 
-        document.getElementById('table-levels').innerHTML = Object.entries(levelsMap).map(([name, d]) => `
-            <tr class="hover:bg-slate-50 transition-colors">
-                <td class="px-8 py-4 font-bold text-slate-800">${name}</td>
-                <td class="text-center font-semibold text-green-600">${d.o}</td>
-                <td class="text-center font-semibold text-amber-500">${d.m}</td>
-                <td class="text-center font-semibold text-red-500">${d.i}</td>
-                <td class="text-center font-black bg-slate-50">${d.o + d.m + d.i}</td>
-            </tr>
-        `).join('');
+        // Hoja 1: Resumen Global
+        const globalData = [];
+        globalData.push(["Nivel Competencial", "Inicial - Alumnos", "Inicial - Porcentaje", ...(hasFinal ? ["Final - Alumnos", "Final - Porcentaje", "Variación Absoluta"] : [])]);
+        
+        const globalInitial = initialGroups.reduce((acc, g) => { acc.o += g.o; acc.m += g.m; acc.i += g.i; return acc; }, { o: 0, m: 0, i: 0 });
+        const totalInitial = globalInitial.o + globalInitial.m + globalInitial.i;
 
-        // 4. Gráfico Optimizado para PDF
-        const ctx = document.getElementById('chart-groups').getContext('2d');
-        if (myChart) myChart.destroy();
-        myChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: groups.map(g => g.n),
-                datasets: [
-                    { label: 'Óptimo', data: groups.map(g => g.o), backgroundColor: '#22c55e' },
-                    { label: 'Medio', data: groups.map(g => g.m), backgroundColor: '#f59e0b' },
-                    { label: 'Inadecuado', data: groups.map(g => g.i), backgroundColor: '#ef4444' }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { 
-                    legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10, weight: 'bold' } } }
-                },
-                scales: {
-                    x: { stacked: true, ticks: { font: { size: 9 } } },
-                    y: { stacked: true, beginAtZero: true }
-                }
+        let globalFinal = null;
+        let totalFinal = 0;
+        if (hasFinal) {
+            globalFinal = finalGroups.reduce((acc, g) => { acc.o += g.o; acc.m += g.m; acc.i += g.i; return acc; }, { o: 0, m: 0, i: 0 });
+            totalFinal = globalFinal.o + globalFinal.m + globalFinal.i;
+        }
+
+        const addRow = (label, vi, vf) => {
+            const row = [label, vi, totalInitial ? `${((vi/totalInitial)*100).toFixed(1)}%` : '0%'];
+            if (hasFinal) {
+                row.push(vf, totalFinal ? `${((vf/totalFinal)*100).toFixed(1)}%` : '0%', vf - vi);
             }
+            globalData.push(row);
+        };
+
+        addRow("Óptimo", globalInitial.o, globalFinal ? globalFinal.o : 0);
+        addRow("Medio", globalInitial.m, globalFinal ? globalFinal.m : 0);
+        addRow("Inadecuado", globalInitial.i, globalFinal ? globalFinal.i : 0);
+
+        const wsGlobal = XLSX.utils.aoa_to_sheet(globalData);
+        XLSX.utils.book_append_sheet(wb, wsGlobal, "Resumen Global");
+
+        // Hoja 2: Niveles
+        const levelsMap = {};
+        initialGroups.forEach(g => {
+            const lvl = extractLevelName(g.n);
+            if (!levelsMap[lvl]) levelsMap[lvl] = { io:0, im:0, ii:0, fo:0, fm:0, fi:0 };
+            levelsMap[lvl].io += g.o; levelsMap[lvl].im += g.m; levelsMap[lvl].ii += g.i;
+        });
+        if (hasFinal) {
+            finalGroups.forEach(g => {
+                const lvl = extractLevelName(g.n);
+                if (!levelsMap[lvl]) levelsMap[lvl] = { io:0, im:0, ii:0, fo:0, fm:0, fi:0 };
+                levelsMap[lvl].fo += g.o; levelsMap[lvl].fm += g.m; levelsMap[lvl].fi += g.i;
+            });
+        }
+
+        const levelsData = [];
+        levelsData.push([
+            "Nivel Educativo", 
+            "Inicial Ópt.", "Inicial Med.", "Inicial Inad.",
+            ...(hasFinal ? ["Final Ópt.", "Final Med.", "Final Inad.", "Var Ópt.", "Var Med.", "Var Inad."] : []),
+            "Total Alumnos"
+        ]);
+
+        Object.entries(levelsMap).forEach(([name, d]) => {
+            const row = [name, d.io, d.im, d.ii];
+            if (hasFinal) {
+                row.push(d.fo, d.fm, d.fi, d.fo-d.io, d.fm-d.im, d.fi-d.ii);
+            }
+            row.push(d.io + d.im + d.ii);
+            levelsData.push(row);
         });
 
-        document.getElementById('table-groups').innerHTML = groups.map(g => `
-            <tr>
-                <td class="px-6 py-3 font-bold text-slate-700">${g.n}</td>
-                <td class="text-center text-green-600">${g.o}</td>
-                <td class="text-center text-amber-500">${g.m}</td>
-                <td class="text-center text-red-500">${g.i}</td>
-            </tr>
-        `).join('');
+        const wsLevels = XLSX.utils.aoa_to_sheet(levelsData);
+        XLSX.utils.book_append_sheet(wb, wsLevels, "Por Niveles");
 
-        document.getElementById('txt-pedagogy').textContent = `Tras analizar a los ${totalEvaluados} alumnos, se recomienda priorizar los apoyos en los grupos con mayor tasa de 'Inadecuado' (${global.i} alumnos totales en el centro). Los niveles con mayor éxito (Óptimo) deben servir de modelo para la implementación de nuevas estrategias de lectura compartida.`;
-
-        showTab('analysis');
+        // Guardar archivo
+        XLSX.writeFile(wb, "Informe_Comparativo_Comprension_Lectora.xlsx");
+        showToast("Archivo Excel generado y descargado.", "success");
     }
 
     function exportPDF() {
@@ -347,20 +822,31 @@
         cover.style.display = 'flex';
         document.getElementById('pdf-date').textContent = "Generado el " + new Date().toLocaleDateString();
 
+        // Reducimos dinámicamente el tamaño del contenedor del gráfico durante el renderizado para un ajuste perfecto sin recortes
+        const chartWrapper = document.querySelector('.chart-wrapper-pdf');
+        if (chartWrapper) {
+            chartWrapper.style.height = '240px';
+            chartWrapper.style.maxWidth = '600px';
+        }
+
         const opt = {
-            margin: [10, 5, 10, 5],
-            filename: 'Informe_Lectura_Centro.pdf',
+            margin: [15, 10, 15, 10],
+            filename: 'Informe_Comparativo_Lectura.pdf',
             image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+            html2canvas: { scale: 1.5, useCORS: true, letterRendering: true },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
             pagebreak: { mode: ['css', 'legacy'] }
         };
 
         html2pdf().set(opt).from(element).save().then(() => {
             cover.style.display = 'none';
+            if (chartWrapper) {
+                chartWrapper.style.height = '300px';
+                chartWrapper.style.maxWidth = '800px';
+            }
+            showToast("Informe en PDF generado y descargado.", "success");
         });
     }
 </script>
-
-
-</body></html>
+</body>
+</html>
